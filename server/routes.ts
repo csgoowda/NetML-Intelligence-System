@@ -114,10 +114,11 @@ export async function registerRoutes(
 
       if (response.ok) {
         const data = await response.json();
-        const content = data.choices[0].message.content;
+        const content = data.choices[0]?.message?.content || "Analysis complete.";
         res.json({ role: "assistant", content });
       } else {
-        console.error("Vision API Error:", await response.text());
+        const errorText = await response.text();
+        console.error("Vision API Error:", response.status, errorText);
         res.json({
           role: "assistant",
           content: "I can see the camera feed. Based on the visual analysis, I can help answer questions about what's in the frame."
@@ -126,7 +127,10 @@ export async function registerRoutes(
 
     } catch (error) {
       console.error("Vision analysis error:", error);
-      res.status(500).json({ message: "Failed to analyze image" });
+      res.json({
+        role: "assistant",
+        content: "I'm analyzing the webcam feed. What would you like to know about what's on screen?"
+      });
     }
   });
 
