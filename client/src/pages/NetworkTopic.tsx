@@ -1,5 +1,6 @@
-import { Network, Server, Share2, Wifi } from "lucide-react";
+import { Network, Server, Share2, Wifi, Activity } from "lucide-react";
 import { motion } from "framer-motion";
+import { NetworkProtocols } from "@/components/NetworkProtocols";
 
 export default function NetworkTopic() {
   const sections = [
@@ -61,6 +62,14 @@ export default function NetworkTopic() {
             </p>
           </motion.div>
         ))}
+      </div>
+
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+          <Network className="w-6 h-6 text-primary" />
+          Streaming Protocols Comparison
+        </h2>
+        <NetworkProtocols />
       </div>
 
       <div className="bg-card/30 border border-dashed border-border rounded-xl p-8 mt-12">

@@ -2,11 +2,13 @@ import { useParams } from "wouter";
 import { useVideo } from "@/hooks/use-videos";
 import { useMessages, useCreateMessage, useChatCompletion } from "@/hooks/use-chat";
 import { useMemoryLogs } from "@/hooks/use-memory";
-import { Loader2, ChevronLeft, Cpu, Activity, Server, Play, Pause } from "lucide-react";
+import { Loader2, ChevronLeft, Cpu, Activity, Server, Play, Pause, Monitor } from "lucide-react";
 import { Link } from "wouter";
 import { ChatInterface } from "@/components/ChatInterface";
 import { MemoryStream } from "@/components/MemoryStream";
 import { NetworkCharts } from "@/components/NetworkCharts";
+import { WebcamCapture } from "@/components/WebcamCapture";
+import { Button } from "@/components/ui/button";
 import { useState, useRef, useEffect } from "react";
 import clsx from "clsx";
 
@@ -21,6 +23,7 @@ export default function VideoWorkspace() {
   const chatCompletion = useChatCompletion();
 
   const [isPlaying, setIsPlaying] = useState(false);
+  const [useWebcam, setUseWebcam] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // When sending a message, we:
@@ -114,8 +117,28 @@ export default function VideoWorkspace() {
         {/* Left Col: Video & System Stats (8 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-6 min-h-0">
           
+          {/* Source Toggle */}
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant={!useWebcam ? "default" : "outline"}
+              onClick={() => setUseWebcam(false)}
+              className="gap-2 flex-1"
+            >
+              <Play className="w-4 h-4" /> File Stream
+            </Button>
+            <Button
+              size="sm"
+              variant={useWebcam ? "default" : "outline"}
+              onClick={() => setUseWebcam(true)}
+              className="gap-2 flex-1"
+            >
+              <Monitor className="w-4 h-4" /> Webcam
+            </Button>
+          </div>
+
           {/* Video Player Section */}
-          <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-border shadow-2xl group">
+          <div className={clsx("relative aspect-video bg-black rounded-xl overflow-hidden border border-border shadow-2xl group", useWebcam && "hidden")}>
             <video
               ref={videoRef}
               src={video.url}
@@ -145,6 +168,9 @@ export default function VideoWorkspace() {
               </div>
             </div>
           </div>
+
+          {/* Webcam Section */}
+          {useWebcam && <WebcamCapture />}
 
           {/* Bottom Panel: Analytics & Memory (Scrollable if needed, or flex fits) */}
           <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-6">
