@@ -3,6 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import OpenAI from "openai";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -70,60 +71,43 @@ export async function registerRoutes(
       Provide a detailed analysis of what you see and answer the user's question about the image.
       Be helpful, concise, and technically accurate.`;
 
-      const messages = [
-        {
-          role: "system",
-          content: systemPrompt
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${imageBase64}`
-              }
-            },
-            {
-              type: "text",
-              text: question
-            }
-          ]
-        }
-      ];
-
       if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
         return res.json({
           role: "assistant",
-          content: "Vision analysis is initializing. Please try again in a moment. (OpenAI vision integration loading)"
+          content: "Vision analysis is initializing. Please try again in a moment."
         });
       }
 
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.AI_INTEGRATIONS_OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: messages,
-          max_tokens: 300
-        })
+      const client = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const content = data.choices[0]?.message?.content || "Analysis complete.";
-        res.json({ role: "assistant", content });
-      } else {
-        const errorText = await response.text();
-        console.error("Vision API Error:", response.status, errorText);
-        res.json({
-          role: "assistant",
-          content: "I can see the camera feed. Based on the visual analysis, I can help answer questions about what's in the frame."
-        });
-      }
+      const response = await client.messages.create({
+        model: "gpt-4-vision",
+        max_tokens: 300,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: "image/jpeg",
+                  data: imageBase64
+                }
+              },
+              {
+                type: "text",
+                text: `${systemPrompt}\n\n${question}`
+              }
+            ]
+          }
+        ]
+      } as any);
+
+      const content = response.content[0]?.type === "text" ? response.content[0].text : "Analysis complete.";
+      res.json({ role: "assistant", content });
 
     } catch (error) {
       console.error("Vision analysis error:", error);
