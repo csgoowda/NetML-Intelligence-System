@@ -1,12 +1,15 @@
 import { useRef, useState, useEffect } from "react";
-import { Camera, CameraOff, Maximize2 } from "lucide-react";
+import { Camera, CameraOff, Maximize2, Zap, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAnalyzeImage } from "@/hooks/use-vision";
 import clsx from "clsx";
 
-export function WebcamCapture({ className }: { className?: string }) {
+export function WebcamCapture({ className, onAnalysisDone }: { className?: string; onAnalysisDone?: (response: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isActive, setIsActive] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const analyzeImage = useAnalyzeImage();
 
   useEffect(() => {
     if (!isActive) return;
@@ -42,6 +45,33 @@ export function WebcamCapture({ className }: { className?: string }) {
     setIsActive(!isActive);
   };
 
+  const captureAndAnalyze = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    
+    const ctx = canvasRef.current.getContext("2d");
+    if (!ctx) return;
+    
+    canvasRef.current.width = videoRef.current.videoWidth;
+    canvasRef.current.height = videoRef.current.videoHeight;
+    ctx.drawImage(videoRef.current, 0, 0);
+    
+    const imageBase64 = canvasRef.current.toDataURL("image/jpeg").split(",")[1];
+    
+    try {
+      const response = await analyzeImage.mutateAsync({
+        imageBase64,
+        question: "What do you see in this image? Describe the scene, objects, and any interesting details.",
+        context: "Live webcam analysis from StreamChat platform"
+      });
+      
+      if (onAnalysisDone) {
+        onAnalysisDone(response.content);
+      }
+    } catch (err) {
+      console.error("Analysis failed:", err);
+    }
+  };
+
   return (
     <div className={clsx("relative aspect-video bg-black rounded-xl overflow-hidden border border-border shadow-xl group", className)}>
       {!isActive ? (
@@ -65,20 +95,41 @@ export function WebcamCapture({ className }: { className?: string }) {
             playsInline
             className="w-full h-full object-cover"
           />
+          <canvas ref={canvasRef} style={{ display: "none" }} />
+          
           <div className="absolute top-4 left-4 flex gap-2">
             <div className="px-2 py-1 bg-black/60 backdrop-blur rounded text-[10px] font-mono text-cyan-400 border border-cyan-400/30 flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></span>
               WEBCAM ACTIVE
             </div>
           </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={toggleWebcam}
-            className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 backdrop-blur text-white"
-          >
-            <CameraOff className="w-4 h-4" />
-          </Button>
+
+          <div className="absolute bottom-4 left-4 right-4 flex gap-2">
+            <Button
+              size="sm"
+              onClick={captureAndAnalyze}
+              disabled={analyzeImage.isPending}
+              className="gap-2 flex-1 bg-primary/90 hover:bg-primary"
+            >
+              {analyzeImage.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Analyzing...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4" /> Analyze Frame
+                </>
+              )}
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={toggleWebcam}
+              className="bg-black/60 hover:bg-black/80 backdrop-blur text-white"
+            >
+              <CameraOff className="w-4 h-4" />
+            </Button>
+          </div>
         </>
       )}
     </div>

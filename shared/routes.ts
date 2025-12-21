@@ -86,6 +86,18 @@ export const api = {
       responses: {
         200: z.object({ role: z.literal('assistant'), content: z.string() }),
       }
+    },
+    analyzeImage: {
+      method: 'POST' as const,
+      path: '/api/chat/analyze-image',
+      input: z.object({
+        imageBase64: z.string(),
+        question: z.string(),
+        context: z.string().optional()
+      }),
+      responses: {
+        200: z.object({ role: z.literal('assistant'), content: z.string() }),
+      }
     }
   }
 };

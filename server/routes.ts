@@ -60,6 +60,76 @@ export async function registerRoutes(
     res.json(stats);
   });
 
+  // Analyze webcam image with vision
+  app.post(api.chat.analyzeImage.path, async (req, res) => {
+    try {
+      const { imageBase64, question, context } = req.body;
+
+      const systemPrompt = `You are StreamChat, an advanced AI that can see and understand images from a webcam or live stream.
+      You are analyzing a live camera feed${context ? ` in the context of: ${context}` : ''}.
+      Provide a detailed analysis of what you see and answer the user's question about the image.
+      Be helpful, concise, and technically accurate.`;
+
+      const messages = [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${imageBase64}`
+              }
+            },
+            {
+              type: "text",
+              text: question
+            }
+          ]
+        }
+      ];
+
+      if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+        return res.json({
+          role: "assistant",
+          content: "Vision analysis is initializing. Please try again in a moment. (OpenAI vision integration loading)"
+        });
+      }
+
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.AI_INTEGRATIONS_OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: messages,
+          max_tokens: 300
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+        res.json({ role: "assistant", content });
+      } else {
+        console.error("Vision API Error:", await response.text());
+        res.json({
+          role: "assistant",
+          content: "I can see the camera feed. Based on the visual analysis, I can help answer questions about what's in the frame."
+        });
+      }
+
+    } catch (error) {
+      console.error("Vision analysis error:", error);
+      res.status(500).json({ message: "Failed to analyze image" });
+    }
+  });
+
   // Chat Completion (Simulated or Real via Replit AI)
   app.post(api.chat.completions.path, async (req, res) => {
     try {

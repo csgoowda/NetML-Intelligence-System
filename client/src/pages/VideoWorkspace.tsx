@@ -170,7 +170,13 @@ export default function VideoWorkspace() {
           </div>
 
           {/* Webcam Section */}
-          {useWebcam && <WebcamCapture />}
+          {useWebcam && (
+            <WebcamCapture 
+              onAnalysisDone={(response) => {
+                handleSendMessage(response);
+              }}
+            />
+          )}
 
           {/* Bottom Panel: Analytics & Memory (Scrollable if needed, or flex fits) */}
           <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-6">
