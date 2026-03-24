@@ -81,4 +81,56 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+class MockStorage implements IStorage {
+  private videos: Video[] = [];
+  private messages: Message[] = [];
+  private memoryLogs: MemoryLog[] = [];
+  private networkStats: NetworkStat[] = [];
+  private nextId = 1;
+
+  async getVideos(): Promise<Video[]> {
+    return this.videos;
+  }
+
+  async getVideo(id: number): Promise<Video | undefined> {
+    return this.videos.find(v => v.id === id);
+  }
+
+  async createVideo(video: InsertVideo): Promise<Video> {
+    const newVideo: Video = { ...video, id: this.nextId++, createdAt: new Date() };
+    this.videos.push(newVideo);
+    return newVideo;
+  }
+
+  async getMessages(videoId: number): Promise<Message[]> {
+    return this.messages.filter(m => m.videoId === videoId).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  }
+
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const newMessage: Message = { ...message, id: this.nextId++, timestamp: new Date() };
+    this.messages.push(newMessage);
+    return newMessage;
+  }
+
+  async getMemoryLogs(videoId: number): Promise<MemoryLog[]> {
+    return this.memoryLogs.filter(m => m.videoId === videoId).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 50);
+  }
+
+  async createMemoryLog(log: InsertMemoryLog): Promise<MemoryLog> {
+    const newLog: MemoryLog = { ...log, id: this.nextId++, timestamp: new Date() };
+    this.memoryLogs.push(newLog);
+    return newLog;
+  }
+
+  async getNetworkStats(videoId: number): Promise<NetworkStat[]> {
+    return this.networkStats.filter(n => n.videoId === videoId).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 100);
+  }
+
+  async createNetworkStat(stat: InsertNetworkStat): Promise<NetworkStat> {
+    const newStat: NetworkStat = { ...stat, id: this.nextId++, timestamp: new Date() };
+    this.networkStats.push(newStat);
+    return newStat;
+  }
+}
+
+export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MockStorage();
